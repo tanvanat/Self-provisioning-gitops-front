@@ -12,12 +12,12 @@ terraform {
 }
 
 provider "openstack" {
-    user_name           = ""
-    tenant_name         = ""
-    domain_name         = ""
-    password            = ""
-    auth_url            = ""
-    region              = ""
+    user_name           = "tanvanat@nipa.cloud"
+    tenant_name         = "Terraform-test"
+    domain_name         = "nipacloud"
+    password            = "Front1234460!"
+    auth_url            = "https://stg.thaiopenstack.com:5000"
+    region              = "NCP-TH"
 }
 
 provider "k0s" {}

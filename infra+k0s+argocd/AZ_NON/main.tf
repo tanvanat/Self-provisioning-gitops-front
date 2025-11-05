@@ -26,7 +26,7 @@ resource "openstack_networking_floatingip_v2" "floatip_argocd" {
 
 # สร้าง instance/VM
 resource "openstack_compute_instance_v2" "argocd" {
-    name              = "argoCD-NON"
+    name              = "ArgoCD-NON"
     image_name        = var.image_name
     flavor_name       = var.flavor_name
     key_pair          = var.keypair_name

@@ -82,7 +82,7 @@ resource "openstack_networking_floatingip_v2" "floatip_master" {
 # 1.6) สร้าง Instance
 resource "openstack_compute_instance_v2" "master" {
     count             = 1
-    name              = "master-${count.index + 1}-NON"
+    name              = "Master-NON"
     image_name        = var.image_name
     flavor_name       = var.flavor_name
     key_pair          = var.keypair_name
@@ -136,7 +136,7 @@ resource "openstack_networking_floatingip_v2" "floatip_worker" {
 
 resource "openstack_compute_instance_v2" "worker" {
     count             = 2
-    name              = "worker-${count.index + 1}-NON"
+    name              = "Worker-${count.index + 1}-NON"
     image_name        = var.image_name
     flavor_name       = var.flavor_name
     key_pair          = var.keypair_name
