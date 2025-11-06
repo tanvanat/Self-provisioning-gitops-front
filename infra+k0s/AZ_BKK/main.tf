@@ -104,65 +104,63 @@ resource "openstack_networking_port_v2" "port_worker" {
 }
 
 ###############################################
-# 4) Servers (BOOT FROM VOLUME – required for DISK_GB=0 flavors)
+# 4) Servers (BOOT FROM VOLUME – clean)
 ###############################################
 resource "openstack_compute_instance_v2" "master" {
-  name              = "Master-BKK"
-  flavor_name       = var.flavor_name
-  key_pair          = var.keypair_name
-  image_id          = var.image_id
-  security_groups = ["secgroup_BKK"]
-  availability_zone = "NCP-BKK"
-  network { 
+  name        = "Master-BKK"
+  flavor_name = var.flavor_name
+  key_pair    = var.keypair_name
+  # image_id        = var.image_id   # <-- ตัดทิ้ง เมื่อใช้ block_device
+  security_groups   = [openstack_networking_secgroup_v2.secgroup.name]
+  availability_zone = "NCP-BKK" # ถ้าเจอปัญหา scheduling ลองคอมเมนต์ทิ้งให้ auto-schedule
+
+  network {
     port = openstack_networking_port_v2.port_master.id
-    uuid = "40398a72-8cfa-4fbf-8395-8c22e019cdfb"
+    # ห้ามใส่ uuid ถ้ามี port อยู่แล้ว
   }
 
-  # Boot-from-volume: create a Cinder volume from image and boot it
   block_device {
-    uuid                  = var.image_id          # <-- Glance image ID
-    source_type           = "image"
-    destination_type      = "volume"
-    volume_size           = var.volume_size       # >= image min_disk
-    boot_index            = 0
+    uuid             = var.image_id # Glance image ID
+    source_type      = "image"
+    destination_type = "volume"
+    volume_size      = 40
+    # boot_index            = 0
     delete_on_termination = true
-    volume_type         = var.volume_type       # (optional) add variable if your cloud needs a volume type
+    volume_type           = var.volume_type # คอมเมนต์ไว้ก่อน จนกว่าจะชัวร์ว่ามี
   }
-
 }
 
 resource "openstack_compute_instance_v2" "worker" {
-  count             = 2
-  name              = "Worker-${count.index + 1}-BKK"
-  flavor_name       = var.flavor_name
-  key_pair          = var.keypair_name
-  image_id          = var.image_id
-  security_groups = ["secgroup_BKK"]
+  count       = 2
+  name        = "Worker-${count.index + 1}-BKK"
+  flavor_name = var.flavor_name
+  key_pair    = var.keypair_name
+  # image_id        = var.image_id
+  security_groups   = [openstack_networking_secgroup_v2.secgroup.name]
   availability_zone = "NCP-BKK"
-  network { 
-    port = openstack_networking_port_v2.port_worker[count.index].id 
-    uuid = "40398a72-8cfa-4fbf-8395-8c22e019cdfb"
+
+  network {
+    port = openstack_networking_port_v2.port_worker[count.index].id
   }
 
   block_device {
     uuid                  = var.image_id
     source_type           = "image"
     destination_type      = "volume"
-    volume_size           = var.volume_size
+    volume_size           = 60
     boot_index            = 0
     delete_on_termination = true
-    volume_type         = var.volume_type
+    volume_type           = var.volume_type
   }
 }
 
-# ###############################################
-# 5) Floating IPs – สร้างพร้อมผูกพอร์ต (POST)
+###############################################
+# 5) Floating IPs – create+attach (POST) + ignore PUT
 ###############################################
 resource "openstack_networking_floatingip_v2" "floatip_master" {
   pool    = var.public_ip_pool_name_bkk
   port_id = openstack_networking_port_v2.port_master.id
 
-  # กัน Terraform ไป PUT อัปเดต port_id ภายหลัง (ซึ่งคลาวด์นี้ไม่ยอม)
   lifecycle {
     ignore_changes = [port_id]
   }

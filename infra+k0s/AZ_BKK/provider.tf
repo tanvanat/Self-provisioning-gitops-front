@@ -12,17 +12,17 @@ terraform {
 }
 
 provider "openstack" {
-  auth_url             = "https://identity-api.nipa.cloud/v3"
-  region               = "NCP-TH"
+  auth_url = "https://identity-api.nipa.cloud/v3"
+  region   = "NCP-TH"
 
-  user_name            = var.os_username
-  password             = var.os_password
+  user_name           = var.os_username
+  password            = var.os_password
   tenant_name         = var.os_project_name
-  user_domain_name     = var.os_user_domain
-  project_domain_name  = var.os_project_domain
+  user_domain_name    = var.os_user_domain
+  project_domain_name = var.os_project_domain
 
   # to match your CLI --insecure for now
-  insecure             = true
+  insecure = true
 }
 
 provider "k0s" {}
