@@ -2,11 +2,13 @@
 **/.terraform/
 **/.terraform.lock.hcl
 
-# Terraform state (ห้ามขึ้น git เด็ดขาด)
+# Terraform state
+terraform.tfstate*
+**/terraform.tfstate*
 *.tfstate
-*.tfstate.backup
+*.tfstate.*
 **/*.tfstate
-**/*.tfstate.backup
+**/*.tfstate.*
 
 # SSH keys / credentials
 KeyPair.pem

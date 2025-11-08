@@ -1,57 +1,69 @@
-# SSH
-variable "ssh_user" {
-    description = "Default SSH user for Ubuntu cloud images"
-    type        = string
-    default     = "ubuntu"
+variable "external_network_name_non" {
+  description = "Public/external network name for router gateway (e.g. Standard_Public_IP_Pool_BKK)"
+  type        = string
+  default     = "Standard_Public_IP_Pool_NON"
 }
-
-variable "private_key_path" {
-    description = "Path to your private SSH key"
-    type        = string
-    default     = "~/.ssh/id_rsa"
+variable "public_ip_pool_name_non" {
+  description = "Floating IP pool name (e.g. Standard_Public_IP_Pool_BKK)"
+  type        = string
+  default     = "Standard_Public_IP_Pool_NON"
 }
-
-# --------------------- Set up instance ---------------------
 # Image / Flavors / Keypair / Volumes
 variable "image_id" {
-    description = "Image ID for boot volume"
-    type        = string
-    default     = "30c876dd-4470-47d8-b13a-df5f18c85ba4"
+  description = "Image ID for boot volume"
+  type        = string
+  default     = "1d0784d3-6b53-4a99-8e4f-35cd91a512fa"
 }
 
 variable "image_name" {
-    description = "Image name for boot volume"
-    type        = string
-    default     = "ubuntu-20-v220723"
+  description = "Image name for boot volume"
+  type        = string
+  default     = "ubuntu-24-v250303"
 }
-
+variable "volume_type" {
+  type    = string
+  default = "Standard_SSD"
+}
 variable "flavor_name" {
-    description = "Flavor for master and worker"
-    type        = string
-    default     = "csa.xlarge.v2"
-    }
+  description = "Flavor for master and worker"
+  type        = string
+  default     = "csa.2xlarge.v2"
+}
 
 variable "keypair_name" {
-    description = "Keypair for master and worker"
-    type        = string
-    default     = "keypair"
+  description = "Keypair for master and worker"
+  type        = string
+  default     = "KeyPair"
 }
-
-variable "volume_size" {
-    description = "Size (GB) of the master volume and worker volume"
-    type        = number
-    default     = 50
-}
-
 # Availability Zones / IP Pools
-variable "availability_zone_bkk" {
-    description = "AZ for NON"
-    type        = string
-    default     = "NCP-NON"
+variable "availability_zone_non" {
+  description = "AZ for NON"
+  type        = string
+  default     = "NCP-NON"
 }
 
-variable "public_ip_pool_name_bkk" {
-    description = "Public IP pool NON"
-    type        = string
-    default     = "Standard_Public_IP_Pool_NON"
+# SSH
+variable "ssh_user" {
+  description = "SSH username for instances"
+  type        = string
+  default     = "nc-user"
+}
+
+variable "private_key_path" {
+  description = "Path to your private SSH key"
+  type        = string
+  default     = "~/.ssh/KeyPair.pem"
+}
+
+# --------------------- Set up instance ---------------------
+
+variable "master_volume_size" {
+  type        = number
+  description = "Root volume size (GiB) for master"
+  default     = 40
+}
+variable "worker_volume_size" {
+  type        = number
+  description = "Root volume size (GiB) for each worker"
+  default     = 60
 }

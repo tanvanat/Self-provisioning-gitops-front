@@ -2,25 +2,9 @@
 # 2.1) Seed known_hosts (avoid first-time SSH delays)
 ###############################################
 resource "null_resource" "seed_known_hosts" {
-  triggers = {
-    master  = openstack_networking_floatingip_v2.floatip_master.address
-    worker1 = openstack_networking_floatingip_v2.floatip_worker[0].address
-    worker2 = openstack_networking_floatingip_v2.floatip_worker[1].address
-  }
-
-  provisioner "local-exec" {
-    interpreter = ["/bin/bash", "-lc"]
-    command = "set +e; for ip in ${self.triggers.master} ${self.triggers.worker1} ${self.triggers.worker2}; do echo '🔁 Refreshing known_hosts for' $ip; ssh-keygen -R $ip >/dev/null 2>&1 || true; ssh-keyscan -T 5 -H $ip >> ~/.ssh/known_hosts.tmp 2>/dev/null || true; done; awk '/^\\|1|^\\[|^ssh-/' ~/.ssh/known_hosts.tmp > ~/.ssh/known_hosts.clean; mv ~/.ssh/known_hosts.clean ~/.ssh/known_hosts; rm -f ~/.ssh/known_hosts.tmp"
-  }
-}
-
-###############################################
-# 2.1b) Wait until nodes are reachable via SSH
-###############################################
-resource "null_resource" "wait_for_ssh" {
   depends_on = [
     openstack_networking_floatingip_v2.floatip_master,
-    openstack_networking_floatingip_v2.floatip_worker
+    openstack_networking_floatingip_v2.floatip_worker,
   ]
 
   triggers = {
@@ -31,9 +15,31 @@ resource "null_resource" "wait_for_ssh" {
 
   provisioner "local-exec" {
     interpreter = ["/bin/bash", "-lc"]
-    command = "echo '⏳ Waiting for SSH...'; for ip in ${self.triggers.master} ${self.triggers.worker1} ${self.triggers.worker2}; do for i in {1..30}; do ssh -o StrictHostKeyChecking=no -i ${var.private_key_path} ${var.ssh_user}@$ip 'echo SSH OK' >/dev/null 2>&1 && echo '✅ SSH ready on' $ip && break || echo 'waiting for' $ip '('$i'/30)...' && sleep 10; done; done"
+    command     = "set -e; for ip in ${self.triggers.master} ${self.triggers.worker1} ${self.triggers.worker2}; do ssh-keygen -R \"$${ip}\" >/dev/null 2>&1 || true; ssh-keyscan -T 10 -H -t rsa,ecdsa,ed25519 \"$${ip}\" >> ~/.ssh/known_hosts 2>/dev/null || true; done"
   }
 }
+
+
+###############################################
+# 2.1b) Wait until nodes are reachable via SSH
+###############################################
+resource "null_resource" "wait_for_ssh" {
+  depends_on = [
+    null_resource.seed_known_hosts
+  ]
+
+  triggers = {
+    master  = openstack_networking_floatingip_v2.floatip_master.address
+    worker1 = openstack_networking_floatingip_v2.floatip_worker[0].address
+    worker2 = openstack_networking_floatingip_v2.floatip_worker[1].address
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-lc"]
+    command = "set -e; echo 'Waiting for SSH (publickey) on all nodes...'; for ip in ${self.triggers.master} ${self.triggers.worker1} ${self.triggers.worker2}; do ok=0; for i in $(seq 1 40); do if ssh -o BatchMode=yes -o PreferredAuthentications=publickey -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ${var.private_key_path} ${var.ssh_user}@$${ip} 'echo SSH OK' >/dev/null 2>&1; then echo \"SSH ready on $${ip}\"; ok=1; break; else echo \"waiting for $${ip} ($${i}/40)...\"; sleep 6; fi; done; if [ $ok -ne 1 ]; then echo \"ERROR: SSH not ready on $${ip}\"; exit 1; fi; done; echo 'sleep 20s for cloud-init'; sleep 20"
+  }
+}
+
 
 ###############################################
 # 2.2) Install k0s cluster

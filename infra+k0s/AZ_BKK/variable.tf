@@ -1,26 +1,3 @@
-# --- Auth ---
-variable "os_username" {
-  type    = string
-  default = "tanvanat@nipa.cloud"
-}
-variable "os_password" {
-  type      = string
-  sensitive = true
-  default   = "Homee1234460!"
-}
-variable "os_project_name" {
-  type    = string
-  default = "Nipa-SRE-intern"
-}
-variable "os_user_domain" {
-  type    = string
-  default = "nipacloud"
-}
-variable "os_project_domain" {
-  type    = string
-  default = "nipacloud"
-}
-
 # --- External network + FIP pool ---
 variable "external_network_name_bkk" {
   description = "Public/external network name for router gateway (e.g. Standard_Public_IP_Pool_BKK)"
@@ -74,4 +51,15 @@ variable "private_key_path" {
   description = "Path to SSH private key"
   type        = string
   default     = "~/.ssh/KeyPair.pem"
+}
+
+variable "master_volume_size" {
+  type        = number
+  description = "Root volume size (GiB) for master"
+  default     = 40
+}
+variable "worker_volume_size" {
+  type        = number
+  description = "Root volume size (GiB) for each worker"
+  default     = 60
 }

@@ -128,6 +128,13 @@ resource "openstack_compute_instance_v2" "master" {
     delete_on_termination = true
     volume_type           = var.volume_type # คอมเมนต์ไว้ก่อน จนกว่าจะชัวร์ว่ามี
   }
+
+  # NEW: regenerate machine-id + set hostname via cloud-init
+  user_data = templatefile("${path.module}/cloud-init.tpl", {
+    hostname = "Master-BKK"
+  })
+
+  timeouts { create = "20m" }
 }
 
 resource "openstack_compute_instance_v2" "worker" {
@@ -152,36 +159,36 @@ resource "openstack_compute_instance_v2" "worker" {
     delete_on_termination = true
     volume_type           = var.volume_type
   }
+
+  # NEW: unique hostname + machine-id regen
+  user_data = templatefile("${path.module}/cloud-init.tpl", {
+    hostname = "Worker-${count.index + 1}-BKK"
+  })
+
+  timeouts { create = "20m" }
 }
 
 ###############################################
 # 5) Floating IPs – create+attach (POST) + ignore PUT
 ###############################################
 resource "openstack_networking_floatingip_v2" "floatip_master" {
-  pool    = var.public_ip_pool_name_bkk
-  port_id = openstack_networking_port_v2.port_master.id
-
-  lifecycle {
-    ignore_changes = [port_id]
-  }
-
+  pool        = var.public_ip_pool_name_bkk
+  description = "ExternalIP-Master-BKK"
+  port_id     = openstack_networking_port_v2.port_master.id
+  
   depends_on = [
-    openstack_networking_router_interface_v2.router_iface,
-    openstack_compute_instance_v2.master
+    openstack_networking_router_interface_v2.router_iface
   ]
 }
 
+# Workers FIP
 resource "openstack_networking_floatingip_v2" "floatip_worker" {
-  count   = 2
-  pool    = var.public_ip_pool_name_bkk
-  port_id = openstack_networking_port_v2.port_worker[count.index].id
-
-  lifecycle {
-    ignore_changes = [port_id]
-  }
+  count       = 2
+  pool        = var.public_ip_pool_name_bkk
+  port_id     = openstack_networking_port_v2.port_worker[count.index].id
+  description = "ExternalIP-Worker-${count.index + 1}-BKK"
 
   depends_on = [
-    openstack_networking_router_interface_v2.router_iface,
-    openstack_compute_instance_v2.worker
+    openstack_networking_router_interface_v2.router_iface
   ]
 }
