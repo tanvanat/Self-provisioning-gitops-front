@@ -6,8 +6,8 @@ resource "openstack_networking_network_v2" "network" {
 resource "openstack_networking_subnet_v2" "subnet" {
   name            = "subnet_NON"
   network_id      = openstack_networking_network_v2.network.id
-  cidr            = "10.10.1.0/24"
-  gateway_ip      = "10.10.1.1"
+  cidr            = "10.10.2.0/24" #ห้ามเหมือนsubnet_BKK
+  gateway_ip      =  "10.10.2.1" #ห้ามเหมือนsubnet_BKK
   dns_nameservers = ["8.8.8.8", "8.8.4.4"]
 }
 
@@ -43,6 +43,14 @@ resource "openstack_networking_secgroup_rule_v2" "ssh" {
   remote_ip_prefix  = "0.0.0.0/0"
   security_group_id = openstack_networking_secgroup_v2.secgroup.id
 }
+resource "openstack_networking_secgroup_rule_v2" "secgroup_rule_egress_all" {
+  direction         = "egress"
+  ethertype         = "IPv4"
+  protocol          = null
+  remote_ip_prefix  = "0.0.0.0/0"
+  security_group_id = openstack_networking_secgroup_v2.secgroup.id
+}
+
 
 resource "openstack_networking_secgroup_rule_v2" "k8s_api" {
   direction         = "ingress"
@@ -71,7 +79,9 @@ resource "openstack_networking_secgroup_rule_v2" "icmp" {
   remote_ip_prefix  = "0.0.0.0/0"
   security_group_id = openstack_networking_secgroup_v2.secgroup.id
 }
-
+data "openstack_networking_secgroup_v2" "default" {
+  name = "default"
+}
 ###############################################
 # Ports + Floating IPs
 ###############################################
@@ -80,7 +90,10 @@ resource "openstack_networking_port_v2" "port_master" {
   network_id = openstack_networking_network_v2.network.id
 
   fixed_ip { subnet_id = openstack_networking_subnet_v2.subnet.id }
-  security_group_ids = [openstack_networking_secgroup_v2.secgroup.id]
+  security_group_ids = [
+    openstack_networking_secgroup_v2.secgroup.id,        # secgroup_NON
+    data.openstack_networking_secgroup_v2.default.id     # default (optional but recommended)
+  ]
 }
 
 resource "openstack_networking_port_v2" "port_worker" {
@@ -89,29 +102,32 @@ resource "openstack_networking_port_v2" "port_worker" {
   network_id = openstack_networking_network_v2.network.id
 
   fixed_ip { subnet_id = openstack_networking_subnet_v2.subnet.id }
-  security_group_ids = [openstack_networking_secgroup_v2.secgroup.id]
+  security_group_ids = [
+    openstack_networking_secgroup_v2.secgroup.id,
+    data.openstack_networking_secgroup_v2.default.id
+  ]
 }
 
-resource "openstack_networking_floatingip_v2" "floatip_master" {
-  pool        = var.public_ip_pool_name_non
-  port_id     = openstack_networking_port_v2.port_master.id
-  description = "ExternalIP-Master-NON"
+# resource "openstack_networking_floatingip_v2" "floatip_master" {
+#   pool        = var.public_ip_pool_name_non
+#   port_id     = openstack_networking_port_v2.port_master.id
+#   description = "ExternalIP-Master-NON"
 
-  depends_on = [openstack_networking_router_interface_v2.router_iface]
+#   depends_on = [openstack_networking_router_interface_v2.router_iface]
 
-  lifecycle { ignore_changes = [port_id] }
-}
+#   lifecycle { ignore_changes = [port_id] }
+# }
 
-resource "openstack_networking_floatingip_v2" "floatip_worker" {
-  count       = 2
-  pool        = var.public_ip_pool_name_non
-  port_id     = openstack_networking_port_v2.port_worker[count.index].id
-  description = "ExternalIP-Worker-${count.index + 1}-NON"
+# resource "openstack_networking_floatingip_v2" "floatip_worker" {
+#   count       = 2
+#   pool        = var.public_ip_pool_name_non
+#   port_id     = openstack_networking_port_v2.port_worker[count.index].id
+#   description = "ExternalIP-Worker-${count.index + 1}-NON"
 
-  depends_on = [openstack_networking_router_interface_v2.router_iface]
+#   depends_on = [openstack_networking_router_interface_v2.router_iface]
 
-  lifecycle { ignore_changes = [port_id] }
-}
+#   lifecycle { ignore_changes = [port_id] }
+# }
 
 ###############################################
 # Compute Instances (with cloud-init)
@@ -120,7 +136,7 @@ resource "openstack_compute_instance_v2" "master" {
   name              = "Master-NON"
   flavor_name       = var.flavor_name
   key_pair          = var.keypair_name
-  security_groups   = [openstack_networking_secgroup_v2.secgroup.name]
+  security_groups   = [openstack_networking_secgroup_v2.secgroup.name, "default"]
   availability_zone = var.availability_zone_non
 
   network { port = openstack_networking_port_v2.port_master.id }
@@ -145,7 +161,7 @@ resource "openstack_compute_instance_v2" "worker" {
   name              = "Worker-${count.index + 1}-NON"
   flavor_name       = var.flavor_name
   key_pair          = var.keypair_name
-  security_groups   = [openstack_networking_secgroup_v2.secgroup.name]
+  security_groups   = [openstack_networking_secgroup_v2.secgroup.name, "default"]
   availability_zone = var.availability_zone_non
 
   network { port = openstack_networking_port_v2.port_worker[count.index].id }

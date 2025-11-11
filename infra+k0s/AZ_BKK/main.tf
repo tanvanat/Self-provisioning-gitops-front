@@ -37,6 +37,9 @@ resource "openstack_networking_router_interface_v2" "router_iface" {
 resource "openstack_networking_secgroup_v2" "secgroup" {
   name        = "secgroup_BKK"
   description = "Security group for master and worker VMs"
+   lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "openstack_networking_secgroup_rule_v2" "secgroup_rule_ssh" {
@@ -48,6 +51,14 @@ resource "openstack_networking_secgroup_rule_v2" "secgroup_rule_ssh" {
   remote_ip_prefix  = "0.0.0.0/0"
   security_group_id = openstack_networking_secgroup_v2.secgroup.id
 }
+resource "openstack_networking_secgroup_rule_v2" "secgroup_rule_egress_all" {
+  direction         = "egress"
+  ethertype         = "IPv4"
+  protocol          = null
+  remote_ip_prefix  = "0.0.0.0/0"
+  security_group_id = openstack_networking_secgroup_v2.secgroup.id
+}
+
 
 resource "openstack_networking_secgroup_rule_v2" "secgroup_rule_k8s" {
   direction         = "ingress"
@@ -76,7 +87,9 @@ resource "openstack_networking_secgroup_rule_v2" "secgroup_rule_icmp" {
   remote_ip_prefix  = "0.0.0.0/0"
   security_group_id = openstack_networking_secgroup_v2.secgroup.id
 }
-
+data "openstack_networking_secgroup_v2" "default" {
+  name = "default"
+}
 ###############################################
 # 3) Ports
 ###############################################
@@ -88,7 +101,10 @@ resource "openstack_networking_port_v2" "port_master" {
     subnet_id = openstack_networking_subnet_v2.subnet.id
   }
 
-  security_group_ids = [openstack_networking_secgroup_v2.secgroup.id]
+  security_group_ids =  [
+  openstack_networking_secgroup_v2.secgroup.id,
+  data.openstack_networking_secgroup_v2.default.id
+]
 }
 
 resource "openstack_networking_port_v2" "port_worker" {
@@ -100,7 +116,10 @@ resource "openstack_networking_port_v2" "port_worker" {
     subnet_id = openstack_networking_subnet_v2.subnet.id
   }
 
-  security_group_ids = [openstack_networking_secgroup_v2.secgroup.id]
+  security_group_ids =  [
+  openstack_networking_secgroup_v2.secgroup.id,
+  data.openstack_networking_secgroup_v2.default.id
+]
 }
 
 ###############################################
@@ -111,7 +130,7 @@ resource "openstack_compute_instance_v2" "master" {
   flavor_name = var.flavor_name
   key_pair    = var.keypair_name
   # image_id        = var.image_id   # <-- ตัดทิ้ง เมื่อใช้ block_device
-  security_groups   = [openstack_networking_secgroup_v2.secgroup.name]
+  security_groups   = [openstack_networking_secgroup_v2.secgroup.name, "default"]
   availability_zone = "NCP-BKK" # ถ้าเจอปัญหา scheduling ลองคอมเมนต์ทิ้งให้ auto-schedule
 
   network {
@@ -143,7 +162,7 @@ resource "openstack_compute_instance_v2" "worker" {
   flavor_name = var.flavor_name
   key_pair    = var.keypair_name
   # image_id        = var.image_id
-  security_groups   = [openstack_networking_secgroup_v2.secgroup.name]
+  security_groups   = [openstack_networking_secgroup_v2.secgroup.name, "default"]
   availability_zone = "NCP-BKK"
 
   network {
@@ -171,24 +190,24 @@ resource "openstack_compute_instance_v2" "worker" {
 ###############################################
 # 5) Floating IPs – create+attach (POST) + ignore PUT
 ###############################################
-resource "openstack_networking_floatingip_v2" "floatip_master" {
-  pool        = var.public_ip_pool_name_bkk
-  description = "ExternalIP-Master-BKK"
-  port_id     = openstack_networking_port_v2.port_master.id
+# resource "openstack_networking_floatingip_v2" "floatip_master" {
+#   pool        = var.public_ip_pool_name_bkk
+#   description = "ExternalIP-Master-BKK"
+#   port_id     = openstack_networking_port_v2.port_master.id
   
-  depends_on = [
-    openstack_networking_router_interface_v2.router_iface
-  ]
-}
+#   depends_on = [
+#     openstack_networking_router_interface_v2.router_iface
+#   ]
+# }
 
 # Workers FIP
-resource "openstack_networking_floatingip_v2" "floatip_worker" {
-  count       = 2
-  pool        = var.public_ip_pool_name_bkk
-  port_id     = openstack_networking_port_v2.port_worker[count.index].id
-  description = "ExternalIP-Worker-${count.index + 1}-BKK"
+# resource "openstack_networking_floatingip_v2" "floatip_worker" {
+#   count       = 2
+#   pool        = var.public_ip_pool_name_bkk
+#   port_id     = openstack_networking_port_v2.port_worker[count.index].id
+#   description = "ExternalIP-Worker-${count.index + 1}-BKK"
 
-  depends_on = [
-    openstack_networking_router_interface_v2.router_iface
-  ]
-}
+#   depends_on = [
+#     openstack_networking_router_interface_v2.router_iface
+#   ]
+# }

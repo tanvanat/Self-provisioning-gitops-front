@@ -1,16 +1,25 @@
 ###############################################
-# 2.1) Seed known_hosts (avoid first-time SSH delays)
+# Fixed public IPs (BKK)
+###############################################
+locals {
+  master_public_ip_bkk  = "103.212.36.23"
+  worker1_public_ip_bkk = "103.212.36.226"
+  worker2_public_ip_bkk = "103.29.189.79"
+}
+
+###############################################
+# 2.1) Seed known_hosts
 ###############################################
 resource "null_resource" "seed_known_hosts" {
   depends_on = [
-    openstack_networking_floatingip_v2.floatip_master,
-    openstack_networking_floatingip_v2.floatip_worker,
+    openstack_compute_instance_v2.master,
+    openstack_compute_instance_v2.worker,
   ]
 
   triggers = {
-    master  = openstack_networking_floatingip_v2.floatip_master.address
-    worker1 = openstack_networking_floatingip_v2.floatip_worker[0].address
-    worker2 = openstack_networking_floatingip_v2.floatip_worker[1].address
+    master  = local.master_public_ip_bkk
+    worker1 = local.worker1_public_ip_bkk
+    worker2 = local.worker2_public_ip_bkk
   }
 
   provisioner "local-exec" {
@@ -19,19 +28,18 @@ resource "null_resource" "seed_known_hosts" {
   }
 }
 
-
 ###############################################
 # 2.1b) Wait until nodes are reachable via SSH
 ###############################################
 resource "null_resource" "wait_for_ssh" {
   depends_on = [
-    null_resource.seed_known_hosts
+    null_resource.seed_known_hosts,
   ]
 
   triggers = {
-    master  = openstack_networking_floatingip_v2.floatip_master.address
-    worker1 = openstack_networking_floatingip_v2.floatip_worker[0].address
-    worker2 = openstack_networking_floatingip_v2.floatip_worker[1].address
+    master  = local.master_public_ip_bkk
+    worker1 = local.worker1_public_ip_bkk
+    worker2 = local.worker2_public_ip_bkk
   }
 
   provisioner "local-exec" {
@@ -40,18 +48,14 @@ resource "null_resource" "wait_for_ssh" {
   }
 }
 
-
 ###############################################
 # 2.2) Install k0s cluster
 ###############################################
 resource "k0s_cluster" "k0s" {
   depends_on = [
-    null_resource.seed_known_hosts,
     null_resource.wait_for_ssh,
     openstack_compute_instance_v2.master,
     openstack_compute_instance_v2.worker,
-    openstack_networking_floatingip_v2.floatip_master,
-    openstack_networking_floatingip_v2.floatip_worker
   ]
 
   name    = "k0s-cluster-BKK"
@@ -61,7 +65,7 @@ resource "k0s_cluster" "k0s" {
     {
       role = "controller"
       ssh = {
-        address  = openstack_networking_floatingip_v2.floatip_master.address
+        address  = local.master_public_ip_bkk
         port     = 22
         user     = var.ssh_user
         key_path = var.private_key_path
@@ -70,7 +74,7 @@ resource "k0s_cluster" "k0s" {
     {
       role = "worker"
       ssh = {
-        address  = openstack_networking_floatingip_v2.floatip_worker[0].address
+        address  = local.worker1_public_ip_bkk
         port     = 22
         user     = var.ssh_user
         key_path = var.private_key_path
@@ -79,11 +83,11 @@ resource "k0s_cluster" "k0s" {
     {
       role = "worker"
       ssh = {
-        address  = openstack_networking_floatingip_v2.floatip_worker[1].address
+        address  = local.worker2_public_ip_bkk
         port     = 22
         user     = var.ssh_user
         key_path = var.private_key_path
       }
-    }
+    },
   ]
 }
