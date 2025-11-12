@@ -47,20 +47,20 @@ variable "volume_size" {
 }
 
 # Availability Zones / IP Pools
-variable "availability_zone_non" {
-  description = "AZ for NON"
+variable "availability_zone_bkk" {
+  description = "AZ for BKK"
   type        = string
-  default     = "NCP-NON"
+  default     = "NCP-BKK"
 }
-variable "external_network_name_non" {
-  description = "Public/external network name for router gateway (e.g. Standard_Public_IP_Pool_NON)"
+variable "external_network_name_bkk" {
+  description = "Public/external network name for router gateway (e.g. Standard_Public_IP_Pool_BKK)"
   type        = string
-  default     = "Standard_Public_IP_Pool_NON"
+  default     = "Standard_Public_IP_Pool_BKK"
 }
-variable "public_ip_pool_name_non" {
-  description = "Public IP pool NON"
+variable "public_ip_pool_name_bkk" {
+  description = "Public IP pool BKK"
   type        = string
-  default     = "Standard_Public_IP_Pool_NON"
+  default     = "Standard_Public_IP_Pool_BKK"
 }
 
 # --------------------- Argo CD ---------------------
