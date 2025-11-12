@@ -1,40 +1,56 @@
-# 3.1) หน่วงเวลาหลังดึง Kubeconfig 
+############################################################
+# Argo CD Deployment via Terraform + Helm
+# Works with existing kubeconfig (k0s NON cluster)
+############################################################
+
+# 1️⃣ Wait a bit to ensure kubeconfig/cluster is ready
 resource "time_sleep" "after_kubeconfig" {
-    depends_on = [null_resource.fetch_kubeconfig]
-    create_duration = "30s"
+  create_duration = "10s"
 }
 
-# 3.2) สร้าง namespace
+# 2️⃣ Create the ArgoCD namespace
 resource "kubernetes_namespace" "argocd" {
-    metadata {  
-        name = var.argocd_namespace
-    }
+  metadata {
+    name = var.argocd_namespace
+  }
 }
 
-# 3.3) ติดตั้ง Argo CD
+# 3️⃣ Install ArgoCD using Helm
 resource "helm_release" "argocd" {
-    name             = "argocd"
-    repository       = "https://argoproj.github.io/argo-helm"
-    chart            = "argo-cd"
-    namespace        = kubernetes_namespace.argocd.id
-    version          = var.argocd_chart_version
-    create_namespace = true
+  depends_on = [
+    time_sleep.after_kubeconfig,
+    kubernetes_namespace.argocd
+  ]
 
-    values = [
-      # เเก้ Service Type ให้เป็น NodePort 30080
-      file("${path.module}/config/argocd-values.yaml")
-    ]
+  name       = "argocd"
+  namespace  = kubernetes_namespace.argocd.metadata[0].name
+  repository = "https://argoproj.github.io/argo-helm"
+  chart      = "argo-cd"
+  version    = var.argocd_chart_version
+  timeout    = 600
+  wait       = true
 
-    timeout    = 900
-    wait       = true 
-    depends_on = [kubernetes_namespace.argocd]
+  # ✅ You can modify these values later (NodePort, Ingress, etc.)
+  values = [
+    <<-EOT
+    server:
+      service:
+        type: ClusterIP
+      ingress:
+        enabled: false
+    controller:
+      args:
+        appResyncPeriod: 30
+    EOT
+  ]
 }
 
-# 3.4) อ่านรหัส admin
+# 4️⃣ Read initial admin secret after Helm install completes
 data "kubernetes_secret" "argocd_initial_admin" {
-    metadata {
-      name      = "argocd-initial-admin-secret"
-      namespace = kubernetes_namespace.argocd.id
-    }
-    depends_on = [helm_release.argocd]
+  depends_on = [helm_release.argocd]
+
+  metadata {
+    name      = "argocd-initial-admin-secret"
+    namespace = var.argocd_namespace
+  }
 }
