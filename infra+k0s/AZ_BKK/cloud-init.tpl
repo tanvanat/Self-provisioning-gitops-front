@@ -9,4 +9,4 @@ bootcmd:
   - [bash, -xc, "ln -sf /etc/machine-id /var/lib/dbus/machine-id || true"]
 
 runcmd:
-  - [bash, -xc, "systemd-machine-id-setup || true"]
+  - [bash, -xc,"systemd-machine-id-setup || true"]
