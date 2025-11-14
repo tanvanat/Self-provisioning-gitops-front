@@ -1,5 +1,8 @@
 #cloud-config
 
+hostname: ${hostname}
+manage_etc_hosts: true
+
 package_update: true
 package_upgrade: true
 
@@ -8,6 +11,8 @@ packages:
 
 write_files:
   - path: /etc/haproxy/haproxy.cfg
+    owner: root:root
+    permissions: "0644"
     content: |
       global
           daemon
@@ -23,7 +28,6 @@ write_files:
 
       frontend http_front
           bind *:80
-          option forwardfor
           default_backend k8s_workers
 
       backend k8s_workers
@@ -40,6 +44,6 @@ write_files:
 
 runcmd:
   - systemctl enable haproxy
-  - systemctl start haproxy
+  - systemctl restart haproxy
 
 final_message: "HAProxy installed and configured successfully"

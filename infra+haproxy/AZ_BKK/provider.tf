@@ -8,11 +8,16 @@ terraform {
       source  = "SepehrImanian/haproxy"
       version = "0.0.4"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.38"
+    }
+    null = {
+      source  = "hashicorp/null"
+    }
   }
 }
 
-# provider "haproxy" {
-#   url      = "http://haproxy.example.com:8080"
-#   username = "username"
-#   password = "password"
-# }
+# ใช้ config จาก env / clouds.yaml
+provider "openstack" {}
+
