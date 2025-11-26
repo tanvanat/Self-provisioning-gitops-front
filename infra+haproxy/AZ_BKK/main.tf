@@ -58,10 +58,10 @@ resource "openstack_compute_instance_v2" "haproxy_bkk" {
   }
 
   # cloud-init ติดตั้ง haproxy และเขียน config คร่าว ๆ
-  user_data = templatefile("${path.module}/cloud-init-haproxy.tpl", {
-    hostname                = "haproxy-bkk"
-    cluster_bkk_ingress_ips = var.cluster_bkk_ingress_ips
-  })
+  # user_data = templatefile("${path.module}/cloud-init-haproxy.tpl", {
+  #   hostname                = "haproxy-bkk"
+  #   cluster_bkk_ingress_ips = var.cluster_bkk_ingress_ips
+  # })
 
   depends_on = [
     openstack_networking_port_v2.port_haproxy_bkk
