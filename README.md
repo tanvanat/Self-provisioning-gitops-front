@@ -1,5 +1,6 @@
 # How to start Terraform
-
+ใช้terraformสร้าง instance
+พร้อมมีการเข้าไปติดตั้ง K0S, Haproxy, ArgoCD
 ```base
 terraform init
 ```
@@ -35,3 +36,4 @@ terraform destroy -auto-approve
 - **infra+k0s+argocd** = instance ที่ติดตั้ง k0s เเละ Argo CD
 
 ![READ ME!](IMG_6146.jpg)
+
